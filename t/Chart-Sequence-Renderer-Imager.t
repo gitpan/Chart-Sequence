@@ -22,7 +22,12 @@ sub {
         Messages => [
             [ Foo => "Bar", "Message 1" ],
             [ Bar => "Baz", "Message 2" ],
-            [ Baz => "Bat", "Message 3" ],
+            Chart::Sequence::Message->new(
+                From        => 'Baz',
+                To          => 'Bat',
+                Name        => 'Message 3',
+                Color       => '#000040',
+            ),
         ],
     );
     ok $s;

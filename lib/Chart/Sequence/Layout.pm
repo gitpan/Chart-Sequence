@@ -92,6 +92,7 @@ sub lay_out {
 
         my $label = $_->name;
         my $lm = $l->{label_metrics} = $renderer->string_metrics(
+            %$options,
             string => $label,
         );
 
@@ -99,7 +100,7 @@ sub lay_out {
         $l->{font}      = $lm->{font};
         $l->{fontcolor} = $lm->{color};
         $l->{w} = $lm->{w} + box_left_margin + box_right_margin;
-        $l->{h} = $lm->{b_offs} + box_top_margin + box_bottom_margin;
+        $l->{h} = $lm->{h} + box_top_margin + box_bottom_margin;
         $nodes_h = $l->{h} if $l->{h} > $nodes_h;
     }
 
@@ -110,6 +111,8 @@ sub lay_out {
 
         my $label = $_->name;
         my $lm = $l->{label_metrics} = $renderer->string_metrics(
+            color  => $_->color,
+            %$options,
             string => $label,
         );
 
@@ -117,7 +120,6 @@ sub lay_out {
         $l->{font}      = $lm->{font};
         $l->{fontcolor} = $lm->{color};
         $lm->{h} += message_top_margin + message_bottom_margin;
-        $lm->{h} -= 2;  # fudge factor
         $lm->{w} += message_left_margin + message_right_margin;
         $messages_w = $lm->{w} if $lm->{w} > $messages_w;
     }
@@ -128,7 +130,6 @@ sub lay_out {
     { # nodes.
         my $x = diagram_left_margin + $messages_w;
         my $y = diagram_top_margin;
-        my $new_y = $y;
 
         for ( @nodes ) {
             my $l = $_->_layout_info;
@@ -141,7 +142,6 @@ sub lay_out {
             $l->{ly} = $y + box_top_margin  + $lm->{y_offs};
             $l->{cx} = $l->{x} + floor( $l->{w} / 2 );
             $x += $l->{w} + box_spacing;
-            $new_y = $y + $l->{h} if $y + $l->{h} > $new_y;
         }
         $w = $x if $x > $w;
         $h = $y if $y > $h;
@@ -161,7 +161,7 @@ sub lay_out {
             $l->{gb_index} = $greybar_index;
             $greybar_index = $greybar_index ? 0 : 1;
             $l->{gby1} = $y;
-            $l->{gby2} = $l->{gby1} + $lm->{h} - 1;
+            $l->{gby2} = $l->{gby1} + $lm->{h};
 
             $l->{lx}  = $x + message_left_margin;
             $l->{ly}  = $y + message_top_margin;
@@ -174,7 +174,8 @@ sub lay_out {
                 $l->{y2} = $y + $lm->{h} - message_bottom_margin;
             }
             else {
-                $l->{y1} = $l->{y2} = $y + floor( 0.5 + $lm->{b_offs} / 2 );
+                $l->{y1} = $l->{y2} =
+                    $y + floor( 0.5 + message_top_margin + $lm->{b_offs} / 2 );
             }
 
             $y += $lm->{h};

@@ -53,7 +53,7 @@ sub lay_out {
         Chart::Sequence::Layout->new;
     };
 
-    $layout->lay_out( $sequence, $self );
+    $layout->lay_out( $sequence, $self, $options );
 }
 
 =item render_to_file
@@ -68,9 +68,9 @@ Lays out the image if it's not layed out.
 
 sub _render {
     my $self = shift;
-    my ( $sequence ) = @_;
+    my ( $sequence, $options ) = @_;
 
-    $self->lay_out( $sequence )
+    $self->lay_out( $sequence, $options )
         unless $sequence->_layout_info;
 
     my $l = $sequence->_layout_info;
@@ -96,6 +96,7 @@ sub _render {
         );
     }
 
+    ## Node boxes along the top
     my $node_outline_color = Imager::Color->new( "#808080" );
     for ( map $_->_layout_info, $sequence->nodes ) {
         my $ly = $_->{y} + $_->{h} - 1;
@@ -112,9 +113,9 @@ sub _render {
             text  => $_->{label},
             font  => $_->{font},
             x     => $_->{lx},
-            y     => $_->{ly},
+            y     => $_->{ly} + $_->{label_metrics}->{b_offs},
             color => $_->{fontcolor},
-            align => 0,
+            align => 1,
             aa    => 1,
         );
 
@@ -129,13 +130,14 @@ sub _render {
     }
 
     for ( map $_->_layout_info, $sequence->messages ) {
+        ## Message lines.
         $i->line(
             x1    => $_->{x1},
             y1    => $_->{y1},
             x2    => $_->{x2},
             y2    => $_->{y2},
             aa    => 1,
-            color => "#000000",
+            color => $_->{fontcolor},
         );
 
         my @arrowhead_points = do {
@@ -182,18 +184,34 @@ sub _render {
         $i->polygon(
             points => \@arrowhead_points,
             aa     => 0,
-            color  => "#000000",
+            color => $_->{fontcolor},
         );
 
         $i->string(
             text  => $_->{label},
             font  => $_->{font},
             x     => $_->{lx},
-            y     => $_->{ly},
+            y     => $_->{ly} + $_->{label_metrics}->{b_offs},
             color => $_->{fontcolor},
-            align => 0,
+            align => 1,
             aa    => 1,
         );
+#$i->line(
+#    x1 => $_->{lx},
+#    y1 => $_->{ly},
+#    x2 => $_->{lx} + 10,
+#    y2 => $_->{ly},
+#    aa => 0,
+#    color => "#000000",
+#);
+#$i->line(
+#    x1 => $_->{lx},
+#    y1     => $_->{ly} + $_->{label_metrics}->{b_offs},
+#    x2 => $_->{lx} + 10,
+#    y2     => $_->{ly} + $_->{label_metrics}->{b_offs},
+#    aa => 0,
+#    color => "#000000",
+#);
     }
 
     return $i;
@@ -201,9 +219,10 @@ sub _render {
 
 sub render_to_file {
     my $self = shift;
+    my $options = @_ > 2 && ref $_[-1] eq "HASH" ? pop : {};
     my ( $sequence, $fn, $type ) = @_;
 
-    my $i = $self->_render( $sequence );
+    my $i = $self->_render( $sequence, $options );
     $i->write( file => $fn, defined $type ? ( type => $type ) : () )
         or die $i->errstr, ": $fn\n";
 }
@@ -220,9 +239,10 @@ Lays out image if not layed out.
 
 sub render {
     my $self = shift;
+    my $options = @_ > 1 && ref $_[-1] eq "HASH" ? pop : {};
     my ( $sequence, $type ) = @_;
 
-    my $i = $self->_render( $sequence );
+    my $i = $self->_render( $sequence, $options );
     $i->write( data => \(my $data), type => $type )
         or die $i->errstr, " rendering $type image\n";
     return \$data;
@@ -256,6 +276,7 @@ will always line up.
 sub string_metrics {
     my $self = shift;
     my ( %options ) = @_;
+
     my $font = $options{Font};
     $font ||= $self->_default_font;
 
@@ -268,15 +289,22 @@ sub string_metrics {
         $ascent,
     ) = $font->bounding_box( string => $options{string} );
 
-    return {
+    ## Fudge this.
+    $global_ascent -= 2;
+
+    my $s = {
         w      => $pos_width     - $neg_width,
-        h      => $global_ascent - $global_descent - 1,
-        b_offs => $global_ascent - 1,
-        x_offs => 0,
+        h      => $global_ascent - $global_descent,
+        b_offs => $global_ascent,
+        x_offs => $neg_width,
         y_offs => 0,
         font   => $font,
-        color  => Imager::Color->new( '#000000' ),
+        color  => Imager::Color->new(
+            defined $options{color} ? $options{color} : '#000000'
+        ),
     };
+
+    return $s;
 }
 
 
@@ -284,13 +312,19 @@ sub _default_font {
     my $self = shift;
 
     ## TODO: implement mulitplatform and font path searching
-    $self->{_DefaultFont} ||= Imager::Font->new(
-        file  => "verdana.ttf",
+    $self->{_DefaultFont} ||= do {
+        my $fontfile = "verdana.ttf";
 #        file  => "/usr/share/fonts/default/Type1/c059013l.pfb",
-        size  => 14,
-        color => "#000000",
-        aa    => 1,
-    );
+        my $font = Imager::Font->new(
+            file  => $fontfile,
+            size  => 14,
+            color => "#000000",
+            aa    => 1,
+        );
+        die "Unable to load font '$fontfile'\n"
+            unless defined $font;
+        $font;
+    };
 }
 
 =back

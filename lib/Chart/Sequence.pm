@@ -1,6 +1,6 @@
 package Chart::Sequence;
 
-$VERSION = 0.000_1;
+$VERSION = 0.002;
 
 =head1 NAME
 
@@ -234,7 +234,7 @@ sub read_seqml {
     if ( $type eq "SCALAR" ) {
         return $p->parse_string( $$input )->[0];
     }
-    elsif ( $type eq "GLOB" || UNIVERSAL::isa( $type eq "IO::Handle" ) ) {
+    elsif ( $type eq "GLOB" || UNIVERSAL::isa( $type, "IO::Handle" ) ) {
         return $p->parse_file( $input )->[0];
     }
     elsif ( ! $type ) {

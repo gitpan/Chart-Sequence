@@ -42,14 +42,10 @@ use Chart::Sequence::Message ();
 sub new {
     my $proto = shift;
     my %options = @_;
-use Data::Dumper;
 
     $proto->SUPER::new( 
         Namespaces => { "seq" => $ns },
         Rules => [
-            "/"                     => sub { xpush [] }, # ARRAY to hold seqs
-"*" => sub { warn Dumper( $_[1] ) if $_[1]->{LocalName} eq "sequence" },
-            "end-document::*"       => sub { xpop     }, # return ARRAY of seqs
             "seq:*" => [ "string()" => sub { xset } ],   # set data members
             "seq:*[*]"              => sub {
                 die "Unrecognized SeqML element <$_[1]->{Name}>\n";
@@ -63,6 +59,8 @@ use Data::Dumper;
             "seq:message"     => sub {
                 xadd( messages => Chart::Sequence::Message->new )
             },
+            "start-document::*"     => sub { xpush []; }, # ARRAY to hold seqs
+            "/end-document::*"     => sub {  xpop; }, # return ARRAY of seqs
         ],
     );
 }

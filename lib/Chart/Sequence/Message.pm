@@ -36,6 +36,7 @@ __PACKAGE__->make_methods(qw(
     from
     to
     description
+    color
     URI
     _layout_info
 ));
@@ -83,6 +84,10 @@ What entity received the message.
 
 A longer textual description, displayed according to the rendering.  NOTE:
 we may well add some primitive HTML rendering to this, not sure.
+
+=item color
+
+What color to use for the font and the line.
 
 =item URI
 
